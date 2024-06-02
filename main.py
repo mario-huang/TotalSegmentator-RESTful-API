@@ -42,7 +42,10 @@ async def segment(body: RequestBody = Body(...)):
     """
     Run segment from api.
     """
-    if totalsegmentator(**body) is None:
-        return {"code": 0, "message": "totalsegmentator failed"}
-    return {"code": 200, "message": "totalsegmentator succeed"}
+    try:
+        totalsegmentator(**body)
+    except Exception as e:
+        return {"code": 0, "message": "totalsegmentator failed.\n" + str(e)}
+    else:
+        return {"code": 200, "message": "totalsegmentator succeed."}
 
