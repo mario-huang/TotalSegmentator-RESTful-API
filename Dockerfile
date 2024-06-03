@@ -9,8 +9,6 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
 COPY requirements.txt .
 COPY main.py .
 
-RUN python -m venv .venv && \
-    . .venv/bin/activate && \
-    pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 ENTRYPOINT ["fastapi", "run"]     
