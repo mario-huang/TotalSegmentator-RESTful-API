@@ -33,10 +33,6 @@ class RequestBody(BaseModel):
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
 @app.post("/segment")
 async def segment(body: RequestBody = Body(...)):
     """
