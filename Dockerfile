@@ -14,3 +14,4 @@ RUN pip install -r requirements.txt
 RUN python download_pretrained_weights.py
 
 ENTRYPOINT ["fastapi", "run"]
+EXPOSE 8000
