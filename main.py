@@ -39,7 +39,7 @@ async def segment(body: RequestBody = Body(...)):
     Run segment from api.
     """
     try:
-        totalsegmentator(**body)
+        totalsegmentator(**body.model_dump())
     except Exception as e:
         return {"code": 0, "message": "totalsegmentator failed.\n" + str(e)}
     else:
