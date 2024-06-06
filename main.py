@@ -96,7 +96,7 @@ async def segment_file(file: UploadFile = File(..., description="CT nifti image 
         with open(input, "wb") as f:
             f.write(await file.read())
         output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms))
-        # totalsegmentator(input, output, **asdict(body))
+        totalsegmentator(input, output, **asdict(body))
     except Exception as e:
         return {"code": 0, "message":
                 """totalsegmentator failed.
