@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Body
+from typing import Annotated, Union
+from fastapi import FastAPI, Body, File, Form, UploadFile
 from pydantic import BaseModel, Field
 from totalsegmentator.python_api import totalsegmentator
 
 class RequestBody(BaseModel):
+
     input: str = Field(..., description="CT nifti image or folder of dicom slices")
     output: str = Field(None, description="Output directory for segmentation masks")
     ml: bool = Field(True, description="Save one multilabel image for all classes")
@@ -33,13 +35,31 @@ class RequestBody(BaseModel):
 
 app = FastAPI()
 
-@app.post("/segment")
-async def segment(body: RequestBody = Body(...)):
+@app.post("/segment_path")
+async def segment_path(body: RequestBody = Body(...)):
     """
     Run segment from api.
     """
     try:
-        totalsegmentator(**body.model_dump())
+        print(body)
+        # totalsegmentator(**body.model_dump())
+    except Exception as e:
+        return {"code": 0, "message":
+                """totalsegmentator failed.
+                """ + str(e)}
+    else:
+        return {"code": 200, "message": "totalsegmentator succeed."}
+    
+@app.post("/segment_file")
+async def segment_file(file: Annotated[UploadFile, File(description="CT nifti image or folder of dicom slices")],
+                  param2: Annotated[Union[int, None], Form(description="Parameter 2, an integer")] = None
+                  ):
+    """
+    Run segment from api.
+    """
+    try:
+        print(param2)
+        # totalsegmentator(**body.model_dump())
     except Exception as e:
         return {"code": 0, "message":
                 """totalsegmentator failed.
