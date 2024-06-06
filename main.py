@@ -41,8 +41,7 @@ async def segment_path(body: RequestBody = Body(...)):
     Run segment from api.
     """
     try:
-        print(body.model_dump(exclude_none=True))
-        # totalsegmentator(**body.model_dump())
+        totalsegmentator(**body.model_dump(exclude_none=True))
     except Exception as e:
         return {"code": 0, "message":
                 """totalsegmentator failed.
