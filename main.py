@@ -2,6 +2,7 @@ from dataclasses import asdict, dataclass
 import os
 import time
 from fastapi import Depends, FastAPI, Body, File, Form, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from totalsegmentator.python_api import totalsegmentator
 
@@ -102,4 +103,6 @@ async def segment_file(file: UploadFile = File(..., description="CT nifti image 
                 """totalsegmentator failed.
                 """ + str(e)}
     else:
-        return {"code": 200, "message": "totalsegmentator succeed."}
+        file_path = output + ".nii"
+        headers = {"Content-Disposition": f"attachment; filename={os.path.basename(file_path)}"}
+        return FileResponse(file_path, headers, media_type="application/octet-stream")
