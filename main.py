@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+import os
 import time
 from fastapi import Depends, FastAPI, Body, File, Form, UploadFile
 from pydantic import BaseModel, Field
@@ -34,6 +35,11 @@ class PathRequestBody(BaseModel):
     roi_subset_robust: str = Field(None, description="Like roi_subset but uses a slower but more robust model to find the rois.")
 
 app = FastAPI()
+
+INPUTS_DIRECTORY = "inputs"
+os.makedirs(INPUTS_DIRECTORY, exist_ok=True)
+OUTPUTS_DIRECTORY = "outputs"
+os.makedirs(OUTPUTS_DIRECTORY, exist_ok=True)
 
 @app.post("/segment_input")
 async def segment_input(body: PathRequestBody = Body(...)):
@@ -86,11 +92,11 @@ async def segment_file(file: UploadFile = File(..., description="CT nifti image 
     """
     try:
         timestamp_ms = time.time_ns() // 1000000
-        input = "/inputs/" + str(timestamp_ms) + "-" + file.filename
+        input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + file.filename)
         with open(input, "wb") as f:
-            f.write(file.file)
-        output = "/outputs" + str(timestamp_ms)
-        totalsegmentator(**asdict(body))
+            f.write(await file.read())
+        output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms))
+        # totalsegmentator(input, output, **asdict(body))
     except Exception as e:
         return {"code": 0, "message":
                 """totalsegmentator failed.
