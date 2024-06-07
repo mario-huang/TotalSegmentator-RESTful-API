@@ -47,6 +47,7 @@ async def segment_input(body: PathRequestBody = Body(...)):
     '''
     Run segment from api.
     '''
+    print('body: ' + str(body))
     try:
         totalsegmentator(**body.model_dump())
     except Exception as e:
@@ -91,6 +92,7 @@ async def segment_file(file: UploadFile = File(..., description='CT nifti image 
     '''
     Run segment from api.
     '''
+    print('body: ' + str(body))
     try:
         timestamp_ms = time.time_ns() // 1000000
         input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + '-' + file.filename)
