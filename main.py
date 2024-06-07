@@ -6,6 +6,13 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from totalsegmentator.python_api import totalsegmentator
 
+INPUTS_DIRECTORY = 'inputs'
+os.makedirs(INPUTS_DIRECTORY, exist_ok=True)
+OUTPUTS_DIRECTORY = 'outputs'
+os.makedirs(OUTPUTS_DIRECTORY, exist_ok=True)
+
+app = FastAPI()
+
 class PathRequestBody(BaseModel):
     input: str = Field(..., description='CT nifti image or folder of dicom slices')
     output: str = Field(None, description='Output directory for segmentation masks')
@@ -34,13 +41,6 @@ class PathRequestBody(BaseModel):
     v1_order: bool = Field(False, description='In multilabel file order classes as in v1. New v2 classes will be removed.')
     fastest: bool = Field(False, description='Run even faster lower resolution model (6mm)')
     roi_subset_robust: str = Field(None, description='Like roi_subset but uses a slower but more robust model to find the rois.')
-
-app = FastAPI()
-
-INPUTS_DIRECTORY = 'inputs'
-os.makedirs(INPUTS_DIRECTORY, exist_ok=True)
-OUTPUTS_DIRECTORY = 'outputs'
-os.makedirs(OUTPUTS_DIRECTORY, exist_ok=True)
 
 @app.post('/segment_input')
 async def segment_input(body: PathRequestBody = Body(...)):
