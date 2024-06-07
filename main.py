@@ -104,5 +104,4 @@ async def segment_file(file: UploadFile = File(..., description='CT nifti image 
                 ''' + str(e)}
     else:
         file_path = output + '.nii'
-        headers = {'Content-Disposition': f'attachment; filename={os.path.basename(file_path)}'}
-        return FileResponse(file_path, headers, media_type='application/octet-stream')
+        return FileResponse(file_path, headers={'Content-Disposition': f'attachment; filename={os.path.basename(file_path)}'}, media_type='application/octet-stream')
