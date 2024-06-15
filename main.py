@@ -198,6 +198,8 @@ async def segment_file(
     Run segment from api.
     """
     print("body: " + str(body))
+    if file.filename is None:
+        return {"code": 0, "message": "The file must have a filename."}
     try:
         timestamp_ms = time.time_ns() // 1000000
         input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + file.filename)
@@ -221,7 +223,7 @@ async def segment_file(
             return FileResponse(
                 output,
                 headers={
-                    "Content-Disposition": f"attachment; filename={os.path.basename(file_path)}"
+                    "Content-Disposition": f"attachment; filename={os.path.basename(output)}"
                 },
                 media_type="application/octet-stream",
             )
