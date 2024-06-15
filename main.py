@@ -218,7 +218,6 @@ async def segment_file(
             + str(e),
         }
     else:
-        
         if os.path.isfile(output):
             return FileResponse(
                 output,
