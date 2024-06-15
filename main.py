@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI, Body, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from totalsegmentator.python_api import totalsegmentator
+import nibabel as nib
 
 INPUTS_DIRECTORY = "inputs"
 os.makedirs(INPUTS_DIRECTORY, exist_ok=True)
@@ -202,8 +203,11 @@ async def segment_file(
         input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + file.filename)
         with open(input, "wb") as f:
             f.write(await file.read())
-        output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms))
-        totalsegmentator(input, output, **asdict(body))
+        output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
+        # totalsegmentator(input, output, **asdict(body))
+        input_img = nib.load(input)
+        output_img = totalsegmentator(input_img)
+        nib.save(output_img, output)
     except Exception as e:
         return {
             "code": 0,
@@ -212,10 +216,10 @@ async def segment_file(
             + str(e),
         }
     else:
-        file_path = output + ".nii"
-        if os.path.isfile(file_path):
+        
+        if os.path.isfile(output):
             return FileResponse(
-                file_path,
+                output,
                 headers={
                     "Content-Disposition": f"attachment; filename={os.path.basename(file_path)}"
                 },
