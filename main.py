@@ -198,11 +198,14 @@ async def segment_file(
     Run segment from api.
     """
     print("body: " + str(body))
-    if file.filename is None:
+    filename = file.filename
+    if filename is None:
         return {"code": 0, "message": "The file must have a filename."}
+    if filename.endswith(".gz") is False:
+        return {"code": 0, "message": "The file must a .gz file."}
     try:
         timestamp_ms = time.time_ns() // 1000000
-        input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + file.filename)
+        input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename)
         with open(input, "wb") as f:
             f.write(await file.read())
         output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
