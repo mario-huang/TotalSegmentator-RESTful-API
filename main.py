@@ -211,7 +211,7 @@ async def segment_file(
         output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         # totalsegmentator(input, output, **asdict(body))
         input_img = nib.load(input)
-        output_img = totalsegmentator(input_img, **asdict(body))
+        output_img = totalsegmentator(input_img, None, **asdict(body))
         nib.save(output_img, output)
     except Exception as e:
         return {
