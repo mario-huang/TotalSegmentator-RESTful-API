@@ -1,0 +1,13 @@
+services:
+  totalsegmentator-restful-api:
+    image: mariohuang/totalsegmentator-restful-api:1.0.1
+    ports:
+      - "8001:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ipc: host
