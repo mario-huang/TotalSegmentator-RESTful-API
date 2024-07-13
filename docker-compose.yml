@@ -1,5 +1,6 @@
 services:
   totalsegmentator-restful-api:
+    restart: always
     image: mariohuang/totalsegmentator-restful-api:1.0.1
     ports:
       - "8001:8000"
