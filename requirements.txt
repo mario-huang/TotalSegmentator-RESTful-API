@@ -1,2 +1,2 @@
-fastapi==0.111.0
-totalsegmentator==2.2.1
+fastapi==0.111.1
+TotalSegmentator==2.3.0
