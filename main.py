@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass
 import os
+import sys
 import time
 from fastapi import Depends, FastAPI, Body, File, Form, UploadFile
 from fastapi.responses import FileResponse
@@ -11,6 +12,22 @@ INPUTS_DIRECTORY = "inputs"
 os.makedirs(INPUTS_DIRECTORY, exist_ok=True)
 OUTPUTS_DIRECTORY = "outputs"
 os.makedirs(OUTPUTS_DIRECTORY, exist_ok=True)
+
+
+def is_wsl():
+    try:
+        with open("/proc/version", "r") as f:
+            version_info = f.read().lower()
+            if "microsoft" in version_info:
+                print("Running inside WSL")
+                return True
+    except FileNotFoundError:
+        pass
+    print("Not running inside WSL")
+    return False
+
+
+IS_WSL = is_wsl()
 
 app = FastAPI()
 
@@ -230,3 +247,6 @@ async def segment_file(
                 media_type="application/octet-stream",
             )
         return {"code": 0, "message": "totalsegmentator failed."}
+    finally:
+        if IS_WSL:
+            sys.exit()
