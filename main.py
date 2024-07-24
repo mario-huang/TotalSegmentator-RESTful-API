@@ -1,9 +1,8 @@
 from dataclasses import asdict, dataclass
 import os
-import sys
+import signal
 import time
 from fastapi import (
-    BackgroundTasks,
     Depends,
     FastAPI,
     Body,
@@ -38,11 +37,6 @@ def is_wsl():
 IS_WSL = is_wsl()
 
 app = FastAPI()
-
-
-def after_response_task():
-    if IS_WSL:
-        sys.exit()
 
 
 class PathRequestBody(BaseModel):
@@ -219,7 +213,6 @@ class FileRequestBody:
 
 @app.post("/segment_file")
 async def segment_file(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(
         ..., description="CT nifti image or folder of dicom slices"
     ),
@@ -228,7 +221,6 @@ async def segment_file(
     """
     Run segment from api.
     """
-    background_tasks.add_task(after_response_task)
     print("body: " + str(body))
     filename = file.filename
     if filename is None:
@@ -262,3 +254,6 @@ async def segment_file(
                 media_type="application/octet-stream",
             )
         return {"code": 0, "message": "totalsegmentator failed."}
+    finally:
+        if IS_WSL:
+            os.kill(os.getpid(), signal.SIGINT)
