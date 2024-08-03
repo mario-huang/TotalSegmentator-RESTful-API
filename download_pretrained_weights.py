@@ -32,4 +32,3 @@ if __name__ == "__main__":
         779,
     ]:
         download_pretrained_weights(task_id)
-        sleep(5)
