@@ -10,7 +10,7 @@ And I will give you the	**output file**(a segmented image as an .nii.gz file).
 - NVIDIA GPU with drivers installed
 
 ## Installation
-Use the docker-compose.yml file to set up and run the service.
+Use the [docker-compose.yml](https://raw.githubusercontent.com/mario-huang/TotalSegmentator-RESTful-API/main/docker-compose.yml) file to set up and run the service.
 ```bash
 docker compose up -d
 ```
