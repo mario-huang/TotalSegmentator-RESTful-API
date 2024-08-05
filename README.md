@@ -27,5 +27,9 @@ curl -X POST -F "file=@/path/to/ct/image/or/dicom/folder" http://localhost:8001/
 ## Contributing
 Feel free to open issues or submit pull requests if you have any improvements or bug fixes.
 
-## License
-This project is licensed under the MIT License.
+## Reference
+This project uses TotalSegmentator. If you use this project, please cite it as follows:
+```
+Wasserthal, J., Breit, H.-C., Meyer, M.T., Pradella, M., Hinck, D., Sauter, A.W., Heye, T., Boll, D., Cyriac, J., Yang, S., Bach, M., Segeroth, M., 2023. TotalSegmentator: Robust Segmentation of 104 Anatomic Structures in CT Images. Radiology: Artificial Intelligence. https://doi.org/10.1148/ryai.230024
+```
+Please also cite [nnUNet](https://github.com/MIC-DKFZ/nnUNet) since TotalSegmentator is heavily based on it.
