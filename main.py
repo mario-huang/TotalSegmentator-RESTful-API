@@ -49,7 +49,11 @@ class FileRequestBody:
     preview: bool = Form(False, description="Generate a png preview of segmentation")
     task: str = Form(
         "total",
-        description="Select which model to use. This determines what is predicted. Choices: total, body, lung_vessels, cerebral_bleed, hip_implant, coronary_arteries, pleural_pericard_effusion, test, appendicular_bones, tissue_types, heartchambers_highres, face, vertebrae_body",
+        description="""
+        Select which model to use. This determines what is predicted.
+        Choices: 
+        "total", "body", "lung_vessels", "cerebral_bleed", "hip_implant", "coronary_arteries", "pleural_pericard_effusion", "test", "appendicular_bones", "tissue_types", "heartchambers_highres", "face", "vertebrae_body", "total_mr", "tissue_types_mr", "face_mr", "head_glands_cavities", "head_muscles", "headneck_bones_vessels", "headneck_muscles", "brain_structures", "liver_vessels"
+        """,
     )
     roi_subset: str = Form(
         None,
