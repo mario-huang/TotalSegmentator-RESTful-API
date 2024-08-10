@@ -119,7 +119,7 @@ class FileRequestBody:
 
 @app.post("/segment_file")
 async def segment_file(
-    file: UploadFile = File(
+    input: UploadFile = File(
         ..., description="CT nifti image or folder of dicom slices"
     ),
     body: FileRequestBody = Depends(),
@@ -128,20 +128,20 @@ async def segment_file(
     Run segment from api.
     """
     print("body: " + str(body))
-    filename = file.filename
-    if filename is None:
+    input_name = input.filename
+    if input_name is None:
         return {"code": 0, "message": "The file must have a filename."}
-    if filename.endswith(".gz") is False:
-        return {"code": 0, "message": "The file must a .gz file."}
+    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
+        return {"code": 0, "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input."}
     try:
         timestamp_ms = time.time_ns() // 1000000
-        input = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename)
-        with open(input, "wb") as f:
-            f.write(await file.read())
-        output = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
-        input_img = nib.load(input)
+        input_path = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name)
+        with open(input_path, "wb") as f:
+            f.write(await input.read())
+        output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
+        input_img = nib.load(input_path)
         output_img = totalsegmentator(input_img, None, **asdict(body))
-        nib.save(output_img, output)
+        nib.save(output_img, output_path)
     except Exception as e:
         return {
             "code": 0,
@@ -150,11 +150,11 @@ async def segment_file(
             + str(e),
         }
     else:
-        if os.path.isfile(output):
+        if os.path.isfile(output_path):
             return FileResponse(
-                output,
+                output_path,
                 headers={
-                    "Content-Disposition": f"attachment; filename={os.path.basename(output)}"
+                    "Content-Disposition": f"attachment; filename={os.path.basename(output_path)}"
                 },
                 media_type="application/octet-stream",
             )
