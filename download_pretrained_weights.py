@@ -6,29 +6,8 @@ if __name__ == "__main__":
     """
     Download all pretrained weights
     """
-    for task_id in [
-        291,
-        292,
-        293,
-        294,
-        295,
-        297,
-        298,
-        258,
-        150,
-        260,
-        503,
-        315,
-        299,
-        300,
-        730,
-        731,
-        732,
-        733,
-        775,
-        776,
-        777,
-        778,
-        779,
-    ]:
-        download_pretrained_weights(task_id)
+    for task_id in range(1, 1000):
+        try:
+            download_pretrained_weights(task_id)
+        except ValueError:
+            continue
