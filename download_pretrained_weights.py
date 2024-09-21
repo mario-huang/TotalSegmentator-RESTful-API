@@ -23,6 +23,14 @@ if __name__ == "__main__":
         "head_muscles": [777],
         "headneck_muscles": [778, 779],
         "liver_vessels": [8],
+        "heartchambers_highres": [301],
+        "appendicular_bones": [304],
+        "tissue_types": [481],
+        "tissue_types_mr": [734],
+        "vertebrae_body": [302],
+        "face": [303],
+        "face_mr": [737],
+        "brain_structures": [409],
     }
 
     for task in task_to_id:

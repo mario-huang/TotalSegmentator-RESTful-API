@@ -142,6 +142,7 @@ async def segment_file(
         input_img = nib.load(input_path)
         output_img = totalsegmentator(input_img, None, **asdict(body))
         nib.save(output_img, output_path)
+        print("Yes! Totalsegmentator Finished!")
     except Exception as e:
         return {
             "code": 0,
