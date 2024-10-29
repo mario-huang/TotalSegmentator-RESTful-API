@@ -138,7 +138,7 @@ async def segment_file(
     except asyncio.TimeoutError:
         print("Segmentation processing timed out.")
         asyncio.create_task(terminate_process())
-        return {"code": 0, "message": "Segmentation processing timed out."}
+        return {"code": 408, "message": "Segmentation processing timed out."}
     finally:
         if IS_WSL:
             os.kill(os.getpid(), signal.SIGINT)
