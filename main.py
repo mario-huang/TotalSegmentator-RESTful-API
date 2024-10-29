@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import asdict, dataclass
 import os
 import signal
@@ -128,14 +129,35 @@ async def segment_file(
     Run segment from api.
     """
     print("body: " + str(body))
+
+    try:
+        # sometimes Totalsegmentator hangs, so we need a timeout
+        return await asyncio.wait_for(
+            process_segment(input, body), timeout=600
+        )
+    except asyncio.TimeoutError:
+        print("Segmentation processing timed out.")
+        asyncio.create_task(terminate_process())
+        return {"code": 0, "message": "Segmentation processing timed out."}
+    finally:
+        if IS_WSL:
+            os.kill(os.getpid(), signal.SIGINT)
+
+
+async def process_segment(input, body):
     input_name = input.filename
     if input_name is None:
         return {"code": 0, "message": "The file must have a filename."}
     if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
-        return {"code": 0, "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input."}
+        return {
+            "code": 0,
+            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
+        }
     try:
         timestamp_ms = time.time_ns() // 1000000
-        input_path = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name)
+        input_path = os.path.join(
+            INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
+        )
         with open(input_path, "wb") as f:
             f.write(await input.read())
         output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
@@ -160,6 +182,7 @@ async def segment_file(
                 media_type="application/octet-stream",
             )
         return {"code": 0, "message": "totalsegmentator failed."}
-    finally:
-        if IS_WSL:
-            os.kill(os.getpid(), signal.SIGINT)
+    
+async def terminate_process():
+    await asyncio.sleep(1)
+    os.kill(os.getpid(), signal.SIGINT)
