@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import asdict, dataclass
 import os
+import shutil
 import signal
 import time
 from fastapi import (
@@ -15,9 +16,12 @@ from totalsegmentator.python_api import totalsegmentator
 import nibabel as nib
 
 INPUTS_DIRECTORY = "inputs"
-os.makedirs(INPUTS_DIRECTORY, exist_ok=True)
 OUTPUTS_DIRECTORY = "outputs"
-os.makedirs(OUTPUTS_DIRECTORY, exist_ok=True)
+
+for directory in [INPUTS_DIRECTORY, OUTPUTS_DIRECTORY]:
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
+    os.makedirs(directory)
 
 
 def is_wsl():
