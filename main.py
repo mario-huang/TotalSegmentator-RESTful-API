@@ -151,7 +151,8 @@ async def segment_file(
             os.kill(os.getpid(), signal.SIGINT)
 
 
-async def process_segment(input, body):
+def process_segment(input, body):
+    print("Start process_segment")
     input_name = input.filename
     if input_name is None:
         return {"code": 0, "message": "The file must have a filename."}
@@ -166,7 +167,7 @@ async def process_segment(input, body):
             INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
         )
         with open(input_path, "wb") as f:
-            f.write(await input.read())
+            f.write(input.read())
         output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         input_img = nib.load(input_path)
         output_img = totalsegmentator(input_img, None, **asdict(body))
