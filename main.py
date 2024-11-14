@@ -134,12 +134,28 @@ async def segment_file(
     Run segment from api.
     """
     print("body: " + str(body))
+
+    input_name = input.filename
+    if input_name is None:
+        return {"code": 0, "message": "The file must have a filename."}
+    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
+        return {
+            "code": 0,
+            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
+        }
+    timestamp_ms = time.time_ns() // 1000000
+    input_path = os.path.join(
+        INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
+    )
+    with open(input_path, "wb") as f:
+        f.write(await input.read())
+    output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
     
     loop = asyncio.get_event_loop()
     try:
         # sometimes Totalsegmentator hangs, so we need a timeout
         result = await asyncio.wait_for(
-            loop.run_in_executor(executor, process_segment, input, body), timeout=600
+            loop.run_in_executor(executor, process_segment, input_path, output_path, body), timeout=600
         )
         return result
     except asyncio.TimeoutError:
@@ -151,24 +167,9 @@ async def segment_file(
             os.kill(os.getpid(), signal.SIGINT)
 
 
-def process_segment(input, body):
+def process_segment(input_path, output_path, body):
     print("Start process_segment")
-    input_name = input.filename
-    if input_name is None:
-        return {"code": 0, "message": "The file must have a filename."}
-    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
-        return {
-            "code": 0,
-            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
-        }
     try:
-        timestamp_ms = time.time_ns() // 1000000
-        input_path = os.path.join(
-            INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
-        )
-        with open(input_path, "wb") as f:
-            f.write(input.read())
-        output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         input_img = nib.load(input_path)
         output_img = totalsegmentator(input_img, None, **asdict(body))
         nib.save(output_img, output_path)
