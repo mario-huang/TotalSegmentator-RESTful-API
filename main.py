@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
 import os
 import shutil
@@ -40,7 +41,7 @@ def is_wsl():
 IS_WSL = is_wsl()
 
 app = FastAPI()
-
+executor = ProcessPoolExecutor()
 
 @dataclass
 class FileRequestBody:
@@ -133,12 +134,14 @@ async def segment_file(
     Run segment from api.
     """
     print("body: " + str(body))
-
+    
+    loop = asyncio.get_event_loop()
     try:
         # sometimes Totalsegmentator hangs, so we need a timeout
-        return await asyncio.wait_for(
-            process_segment(input, body), timeout=600
+        result = await asyncio.wait_for(
+            loop.run_in_executor(executor, process_segment, input, body), timeout=600
         )
+        return result
     except asyncio.TimeoutError:
         print("Segmentation processing timed out.")
         asyncio.create_task(terminate_process())
