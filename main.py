@@ -41,7 +41,7 @@ IS_WSL = is_wsl()
 app = FastAPI()
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=8000, log_level="info", works=os.cpu_count())
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info", workers=os.cpu_count())
 
 @dataclass
 class FileRequestBody:
