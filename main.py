@@ -1,10 +1,10 @@
 import asyncio
 from dataclasses import asdict, dataclass
-from multiprocessing import Pipe, Process
 import os
 import shutil
 import signal
 import time
+import uvicorn
 from fastapi import (
     Depends,
     FastAPI,
@@ -18,7 +18,6 @@ import nibabel as nib
 
 INPUTS_DIRECTORY = "inputs"
 OUTPUTS_DIRECTORY = "outputs"
-
 for directory in [INPUTS_DIRECTORY, OUTPUTS_DIRECTORY]:
     if os.path.exists(directory):
         shutil.rmtree(directory)
@@ -37,11 +36,12 @@ def is_wsl():
     print("Not running inside WSL")
     return False
 
-
 IS_WSL = is_wsl()
 
 app = FastAPI()
 
+if __name__ == "__main__":
+    uvicorn.run("main:app", port=8000, log_level="info", works=os.cpu_count())
 
 @dataclass
 class FileRequestBody:
@@ -138,7 +138,7 @@ async def segment_file(
     try:
         # sometimes Totalsegmentator hangs, so we need a timeout
         return await asyncio.wait_for(
-            process_segment(input, body), timeout=600
+            process_segment(input, body), timeout=5*60
         )
     except asyncio.TimeoutError:
         print("Segmentation processing timed out.")
@@ -163,12 +163,13 @@ async def process_segment(input, body):
         input_path = os.path.join(
             INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
         )
+        print("input_path", input_path)
         with open(input_path, "wb") as f:
             f.write(await input.read())
         output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         input_img = nib.load(input_path)
-        # output_img = totalsegmentator(input_img, None, **asdict(body))
-        output_img = call_totalsegmentator_in_process(input_img, body)
+        output_img = totalsegmentator(input_img, None, **asdict(body))
+        # output_img = call_totalsegmentator_in_process(input_img, body)
         nib.save(output_img, output_path)
         print("Yes! Totalsegmentator Finished!")
     except Exception as e:
@@ -193,23 +194,23 @@ async def terminate_process():
     await asyncio.sleep(1)
     os.kill(os.getpid(), signal.SIGINT)
 
-def run_totalsegmentator(input_img, output, body_dict, conn):
-    try:
-        output_img = totalsegmentator(input_img, output, **body_dict)
-        conn.send(output_img)
-    except Exception as e:
-        conn.send(e)
-    finally:
-        conn.close()
+# def run_totalsegmentator(input_img, output, body_dict, conn):
+#     try:
+#         output_img = totalsegmentator(input_img, output, **body_dict)
+#         conn.send(output_img)
+#     except Exception as e:
+#         conn.send(e)
+#     finally:
+#         conn.close()
         
-def call_totalsegmentator_in_process(input_img, body):
-    parent_conn, child_conn = Pipe()
-    process = Process(target=run_totalsegmentator, args=(input_img, None, asdict(body), child_conn))
-    process.start()
-    process.join()
+# def call_totalsegmentator_in_process(input_img, body):
+#     parent_conn, child_conn = Pipe()
+#     process = Process(target=run_totalsegmentator, args=(input_img, None, asdict(body), child_conn))
+#     process.start()
+#     process.join()
 
-    if parent_conn.poll():
-        result = parent_conn.recv()
-        if isinstance(result, Exception):
-            raise result
-        return result
+#     if parent_conn.poll():
+#         result = parent_conn.recv()
+#         if isinstance(result, Exception):
+#             raise result
+#         return result
