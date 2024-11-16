@@ -1,6 +1,6 @@
 import asyncio
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
+from multiprocessing import Pipe, Process
 import os
 import shutil
 import signal
@@ -41,7 +41,7 @@ def is_wsl():
 IS_WSL = is_wsl()
 
 app = FastAPI()
-executor = ProcessPoolExecutor()
+
 
 @dataclass
 class FileRequestBody:
@@ -135,29 +135,11 @@ async def segment_file(
     """
     print("body: " + str(body))
 
-    input_name = input.filename
-    if input_name is None:
-        return {"code": 0, "message": "The file must have a filename."}
-    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
-        return {
-            "code": 0,
-            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
-        }
-    timestamp_ms = time.time_ns() // 1000000
-    input_path = os.path.join(
-        INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
-    )
-    with open(input_path, "wb") as f:
-        f.write(await input.read())
-    output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
-    
-    loop = asyncio.get_event_loop()
     try:
         # sometimes Totalsegmentator hangs, so we need a timeout
-        result = await asyncio.wait_for(
-            loop.run_in_executor(executor, process_segment, input_path, output_path, body), timeout=600
+        return await asyncio.wait_for(
+            process_segment(input, body), timeout=600
         )
-        return result
     except asyncio.TimeoutError:
         print("Segmentation processing timed out.")
         asyncio.create_task(terminate_process())
@@ -167,11 +149,26 @@ async def segment_file(
             os.kill(os.getpid(), signal.SIGINT)
 
 
-def process_segment(input_path, output_path, body):
-    print("Start process_segment")
+async def process_segment(input, body):
+    input_name = input.filename
+    if input_name is None:
+        return {"code": 0, "message": "The file must have a filename."}
+    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
+        return {
+            "code": 0,
+            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
+        }
     try:
+        timestamp_ms = time.time_ns() // 1000000
+        input_path = os.path.join(
+            INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
+        )
+        with open(input_path, "wb") as f:
+            f.write(await input.read())
+        output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         input_img = nib.load(input_path)
-        output_img = totalsegmentator(input_img, None, **asdict(body))
+        # output_img = totalsegmentator(input_img, None, **asdict(body))
+        output_img = call_totalsegmentator_in_process(input_img, body)
         nib.save(output_img, output_path)
         print("Yes! Totalsegmentator Finished!")
     except Exception as e:
@@ -195,3 +192,24 @@ def process_segment(input_path, output_path, body):
 async def terminate_process():
     await asyncio.sleep(1)
     os.kill(os.getpid(), signal.SIGINT)
+
+def run_totalsegmentator(input_img, output, body_dict, conn):
+    try:
+        output_img = totalsegmentator(input_img, output, **body_dict)
+        conn.send(output_img)
+    except Exception as e:
+        conn.send(e)
+    finally:
+        conn.close()
+        
+def call_totalsegmentator_in_process(input_img, body):
+    parent_conn, child_conn = Pipe()
+    process = Process(target=run_totalsegmentator, args=(input_img, None, asdict(body), child_conn))
+    process.start()
+    process.join()
+
+    if parent_conn.poll():
+        result = parent_conn.recv()
+        if isinstance(result, Exception):
+            raise result
+        return result
