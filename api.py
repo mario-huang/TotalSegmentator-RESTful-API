@@ -130,11 +130,11 @@ async def segment_file(
         )
     except asyncio.TimeoutError:
         print("Segmentation processing timed out.")
-        asyncio.create_task(terminate_process())
+        terminate_process()
         return {"code": 408, "message": "Segmentation processing timed out."}
     finally:
         if IS_WSL:
-            os.kill(os.getpid(), signal.SIGINT)
+            terminate_process()
 
 
 async def process_segment(input, body):
@@ -179,26 +179,5 @@ async def process_segment(input, body):
         return {"code": 0, "message": "totalsegmentator failed."}
     
 async def terminate_process():
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     os.kill(os.getpid(), signal.SIGINT)
-
-# def run_totalsegmentator(input_img, output, body_dict, conn):
-#     try:
-#         output_img = totalsegmentator(input_img, output, **body_dict)
-#         conn.send(output_img)
-#     except Exception as e:
-#         conn.send(e)
-#     finally:
-#         conn.close()
-        
-# def call_totalsegmentator_in_process(input_img, body):
-#     parent_conn, child_conn = Pipe()
-#     process = Process(target=run_totalsegmentator, args=(input_img, None, asdict(body), child_conn))
-#     process.start()
-#     process.join()
-
-#     if parent_conn.poll():
-#         result = parent_conn.recv()
-#         if isinstance(result, Exception):
-#             raise result
-#         return result
