@@ -140,10 +140,10 @@ async def segment_file(
 async def process_segment(input, body):
     input_name = input.filename
     if input_name is None:
-        return {"code": 0, "message": "The file must have a filename."}
+        return {"code": 8001, "message": "The file must have a filename."}
     if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
         return {
-            "code": 0,
+            "code": 8001,
             "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
         }
     try:
@@ -157,12 +157,11 @@ async def process_segment(input, body):
         output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         input_img = nib.load(input_path)
         output_img = totalsegmentator(input_img, None, **asdict(body))
-        # output_img = call_totalsegmentator_in_process(input_img, body)
         nib.save(output_img, output_path)
         print("Yes! Totalsegmentator Finished!")
     except Exception as e:
         return {
-            "code": 0,
+            "code": 8001,
             "message": """totalsegmentator failed.
                 """
             + str(e),
@@ -176,7 +175,7 @@ async def process_segment(input, body):
                 },
                 media_type="application/octet-stream",
             )
-        return {"code": 0, "message": "totalsegmentator failed."}
+        return {"code": 8001, "message": "totalsegmentator failed."}
     
 async def terminate_process():
     await asyncio.sleep(2)
