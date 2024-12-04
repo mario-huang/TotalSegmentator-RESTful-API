@@ -118,15 +118,12 @@ async def segment_file(
     ),
     body: FileRequestBody = Depends(),
 ):
-    """
-    Run segment from api.
-    """
     print("body: " + str(body))
 
     try:
         # sometimes Totalsegmentator hangs, so we need a timeout
         return await asyncio.wait_for(
-            process_segment(input, body), timeout=5*60
+            process_segment(input, body), timeout=10*60
         )
     except asyncio.TimeoutError:
         print("Segmentation processing timed out.")
@@ -136,8 +133,18 @@ async def segment_file(
         if IS_WSL:
             terminate_process()
 
+@app.post("/segment_url")
+async def segment_url(
+    input: str = Form(..., description="CT nifti image or folder of dicom slices"),
+    body: FileRequestBody = Depends(),
+):
+    print("input: " + input)
+    print("body: " + str(body))
 
-async def process_segment(input, body):
+
+
+async def process_segment(input: UploadFile | str, body: FileRequestBody):
+    
     input_name = input.filename
     if input_name is None:
         return {"code": 8001, "message": "The file must have a filename."}
@@ -178,5 +185,41 @@ async def process_segment(input, body):
         return {"code": 8001, "message": "totalsegmentator failed."}
     
 async def terminate_process():
-    await asyncio.sleep(2)
+    await asyncio.sleep(3)
     os.kill(os.getpid(), signal.SIGINT)
+
+def download_file(url: str, download_dir: str = "downloads") -> str:
+    """
+    Downloads a file from the given URL and saves it locally.
+
+    Args:
+        url (str): The URL of the file to download.
+        download_dir (str): Directory where the file will be saved (default: "downloads").
+
+    Returns:
+        str: The path to the downloaded file.
+
+    Raises:
+        ValueError: If the URL is invalid or the download fails.
+    """
+    # Ensure the download directory exists
+    os.makedirs(download_dir, exist_ok=True)
+
+    try:
+        # Get the file name from the URL
+        file_name = url.split("/")[-1] or "downloaded_file"
+        file_path = os.path.join(download_dir, file_name)
+
+        # Download the file
+        response = requests.get(url, stream=True)
+        response.raise_for_status()  # Raise an error for HTTP errors
+
+        # Save the file to the specified path
+        with open(file_path, "wb") as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+
+        return file_path
+
+    except requests.RequestException as e:
+        raise ValueError(f"Failed to download the file: {e}")
