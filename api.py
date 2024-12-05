@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 import signal
 import time
 import os
+from urllib.parse import urlparse
 from fastapi import (
     Depends,
     FastAPI,
@@ -143,24 +144,12 @@ async def segment_url(
 
 
 
-async def process_segment(input: UploadFile | str, body: FileRequestBody):
-    
-    input_name = input.filename
-    if input_name is None:
-        return {"code": 8001, "message": "The file must have a filename."}
-    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
-        return {
-            "code": 8001,
-            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
-        }
+async def process_segment(input: str | UploadFile, body: FileRequestBody):
+    if isinstance(input, str):
+        await download_file(input)
+    else:
+        await save_file(input, input_path)
     try:
-        timestamp_ms = time.time_ns() // 1000000
-        input_path = os.path.join(
-            INPUTS_DIRECTORY, str(timestamp_ms) + "-" + input_name
-        )
-        print("input_path", input_path)
-        with open(input_path, "wb") as f:
-            f.write(await input.read())
         output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
         input_img = nib.load(input_path)
         output_img = totalsegmentator(input_img, None, **asdict(body))
@@ -188,38 +177,28 @@ async def terminate_process():
     await asyncio.sleep(3)
     os.kill(os.getpid(), signal.SIGINT)
 
-def download_file(url: str, download_dir: str = "downloads") -> str:
-    """
-    Downloads a file from the given URL and saves it locally.
+async def download_file(url: str):
+    filename_with_extension = os.path.basename(urlparse(url).path)
+    filename = os.path.splitext(filename_with_extension)[0]
 
-    Args:
-        url (str): The URL of the file to download.
-        download_dir (str): Directory where the file will be saved (default: "downloads").
+    timestamp_ms = time.time_ns() // 1000000
+    path = os.path.join(
+        INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename
+    )
 
-    Returns:
-        str: The path to the downloaded file.
+    response = requests.get(url, stream=True)
+    with open(path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=4194304):
+            f.write(chunk)
 
-    Raises:
-        ValueError: If the URL is invalid or the download fails.
-    """
-    # Ensure the download directory exists
-    os.makedirs(download_dir, exist_ok=True)
-
-    try:
-        # Get the file name from the URL
-        file_name = url.split("/")[-1] or "downloaded_file"
-        file_path = os.path.join(download_dir, file_name)
-
-        # Download the file
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise an error for HTTP errors
-
-        # Save the file to the specified path
-        with open(file_path, "wb") as file:
-            for chunk in response.iter_content(chunk_size=8192):
-                file.write(chunk)
-
-        return file_path
-
-    except requests.RequestException as e:
-        raise ValueError(f"Failed to download the file: {e}")
+async def save_file(input, path):
+    input_name = input.filename
+    if input_name is None:
+        return {"code": 8001, "message": "The file must have a filename."}
+    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
+        return {
+            "code": 8001,
+            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
+        }
+    with open(path, "wb") as f:
+        f.write(await input.read())
