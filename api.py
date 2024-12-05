@@ -1,3 +1,4 @@
+import requests
 import asyncio
 from dataclasses import asdict, dataclass
 import signal
@@ -16,6 +17,7 @@ from main import INPUTS_DIRECTORY, OUTPUTS_DIRECTORY
 from totalsegmentator.python_api import totalsegmentator
 import nibabel as nib
 
+
 def is_wsl():
     try:
         with open("/proc/version", "r") as f:
@@ -28,9 +30,11 @@ def is_wsl():
     print("Not running inside WSL")
     return False
 
+
 IS_WSL = is_wsl()
 
 app = FastAPI()
+
 
 @dataclass
 class FileRequestBody:
@@ -120,19 +124,8 @@ async def segment_file(
     body: FileRequestBody = Depends(),
 ):
     print("body: " + str(body))
+    add_timeout(input, body)
 
-    try:
-        # sometimes Totalsegmentator hangs, so we need a timeout
-        return await asyncio.wait_for(
-            process_segment(input, body), timeout=10*60
-        )
-    except asyncio.TimeoutError:
-        print("Segmentation processing timed out.")
-        terminate_process()
-        return {"code": 408, "message": "Segmentation processing timed out."}
-    finally:
-        if IS_WSL:
-            terminate_process()
 
 @app.post("/segment_url")
 async def segment_url(
@@ -141,12 +134,33 @@ async def segment_url(
 ):
     print("input: " + input)
     print("body: " + str(body))
+    add_timeout(input, body)
 
+
+async def add_timeout(input: str | UploadFile, body: FileRequestBody):
+    try:
+        # sometimes Totalsegmentator hangs, so we need a timeout
+        return await asyncio.wait_for(process_segment(input, body), timeout=10 * 60)
+    except asyncio.TimeoutError:
+        print("Segmentation processing timed out.")
+        terminate_process()
+        return {"code": 408, "message": "Segmentation processing timed out."}
+    finally:
+        if IS_WSL:
+            terminate_process()
 
 
 async def process_segment(input: str | UploadFile, body: FileRequestBody):
+    timestamp_ms = time.time_ns() // 1000000
     if isinstance(input, str):
-        await download_file(input)
+        filename_with_extension = os.path.basename(urlparse(input).path)
+        filename = os.path.splitext(filename_with_extension)[0]
+    else:
+        filename = input.filename
+    input_path = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename)
+
+    if isinstance(input, str):
+        await download_file(input, input_path)
     else:
         await save_file(input, input_path)
     try:
@@ -172,33 +186,20 @@ async def process_segment(input: str | UploadFile, body: FileRequestBody):
                 media_type="application/octet-stream",
             )
         return {"code": 8001, "message": "totalsegmentator failed."}
-    
+
+
 async def terminate_process():
     await asyncio.sleep(3)
     os.kill(os.getpid(), signal.SIGINT)
 
-async def download_file(url: str):
-    filename_with_extension = os.path.basename(urlparse(url).path)
-    filename = os.path.splitext(filename_with_extension)[0]
 
-    timestamp_ms = time.time_ns() // 1000000
-    path = os.path.join(
-        INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename
-    )
-
+async def download_file(url: str, path: str):
     response = requests.get(url, stream=True)
     with open(path, "wb") as f:
         for chunk in response.iter_content(chunk_size=4194304):
             f.write(chunk)
 
+
 async def save_file(input, path):
-    input_name = input.filename
-    if input_name is None:
-        return {"code": 8001, "message": "The file must have a filename."}
-    if input_name.endswith(".gz") is False and input_name.endswith(".zip") is False:
-        return {
-            "code": 8001,
-            "message": "A Nifti file or a folder (or zip file) with all DICOM slices of one patient is allowed as input.",
-        }
     with open(path, "wb") as f:
         f.write(await input.read())
