@@ -136,8 +136,7 @@ async def segment_url(body: UrlRequest):
 async def process_segment(input: str, data: dict[str, Any]):
     timestamp_ms = time.time_ns() // 1000000
     filename_with_extension = os.path.basename(urlparse(input).path)
-    filename = os.path.splitext(filename_with_extension)[0]
-    input_path = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename)
+    input_path = os.path.join(INPUTS_DIRECTORY, str(timestamp_ms) + "-" + filename_with_extension)
     await download_file(input, input_path)
     try:
         output_path = os.path.join(OUTPUTS_DIRECTORY, str(timestamp_ms) + ".nii.gz")
